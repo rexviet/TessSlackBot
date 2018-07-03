@@ -1,60 +1,38 @@
 var Botkit = require('botkit')
+var request = require('request-promise');
+var configs = require('configs');
 
 var controller = Botkit.slackbot({
-  debug: true
-})
+  debug: false
+});
 
-controller.spawn({
-  token: process.env.SLACK_API_TOKEN,
-}).startRTM()
+var BOT = controller.spawn({
+  token: configs.bot_token,
+}).startRTM();
 
-controller.hears(
-  ['xin chào', 'chào mày'],
-  ['direct_message', 'direct_mention', 'mention'],
-  function(bot, message) {
-    controller.storage.users.get(message.user, function(err, user) {
-        if (user && user.name) {
-            bot.reply(message, 'ờ chào ' + user.name + '!')
-        } else {
-            bot.reply(message, 'chào!')
-        }
-    })
-})
+const YTB_REG = /^(https?\:\/\/)?(www\.youtube\.com|youtu\.?be)\/.+$/;
+function isValidURL(url) {
+  return YTB_REG.test(url);
+}
 
-controller.hears(
-  ['tên mày là gì?'],
-  ['direct_message', 'direct_mention', 'mention'],
-  function(bot, message) {
-    bot.reply(message, 'tao là <@' + bot.identity.name +'>, còn mày?')
-})
+controller.on('direct_message', function (bot, message) {
+  console.log('message:', message);
+  console.log('test:', message.text);
+  var url = message.text.substring(1, message.text.length - 1);
+    if(isValidURL(url)) {
+      var opts = {
+        method: 'POST',
+        uri: configs.base_api + '/api/songs/slack',
+        body: {
+          url: url,
+          channel: message.channel
+        },
+        json: true // Automatically stringifies the body to JSON
+      };
 
-controller.hears(
-  ['mày có thể gọi tao là (.*)'],
-  ['direct_message', 'direct_mention', 'mention'],
-  function(bot, message) {
-    var name = message.match[1]
-    controller.storage.users.get(message.user, function(err, user) {
-        if (!user) {
-            user = {
-                id: message.user,
-            }
-        }
-        user.name = name
-        controller.storage.users.save(user, function(err, id) {
-            bot.reply(message, 'ờ, từ giờ tao sẽ gọi mày là ' + user.name)
+      request(opts)
+        .then(function (result) {
+          console.log('result:', result);
         })
-    })
-})
-
-controller.hears(
-  ['mày biết tao là ai rồi chứ?'],
-  ['direct_message', 'direct_mention', 'mention'],
-  function(bot, message) {
-    controller.storage.users.get(message.user, function(err, user) {
-        if (user && user.name) {
-            bot.reply(message, 'mày là ' + user.name + ' chứ gì')
-        } else {
-            bot.reply(message, 'tao éo biết, mày là thằng éo nào?')
-        }
-    })
-})
+    }
+});
