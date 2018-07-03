@@ -1,7 +1,7 @@
 var Botkit = require('botkit')
 var request = require('request-promise');
-var configs = require('configs');
-
+var configs = require('./configs');
+// console.log('configs:', configs);
 var controller = Botkit.slackbot({
   debug: false
 });
